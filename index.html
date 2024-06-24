@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mewing Bird - Juego tipo Flappy Bird Gratis</title>
+    <meta name="description" content="Disfruta de Mewing Bird, un divertido y desafiante juego tipo Flappy Bird. ¡Juega gratis y compite por la mejor puntuación!">
+    <meta name="keywords" content="Mewing Bird, juego tipo Flappy Bird, juego gratis, jugar online, alta puntuación, desafiante, divertido, juego de pájaros, juego de obstáculos">
+    <meta name="author" content="TuNombre">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+        }
+        #gameContainer {
+            text-align: center;
+            width: 90%;
+            max-width: 500px;
+        }
+        canvas {
+            border: 1px solid black;
+            display: block;
+            margin: 0 auto;
+            width: 100%;
+            height: auto;
+        }
+        #scoreBoard, #rankingPanel {
+            margin-top: 20px;
+            font-size: 1.5em;
+        }
+        #restartButton {
+            margin-top: 20px;
+            font-size: 1.2em;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+        @media (max-width: 600px) {
+            #scoreBoard, #rankingPanel {
+                font-size: 1.2em;
+            }
+            #restartButton {
+                font-size: 1em;
+                padding: 8px 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <h1>Mewing Bird</h1>
+        <h2>Juego tipo Flappy Bird</h2>
+        <canvas id="gameCanvas" width="400" height="600"></canvas>
+        <div id="scoreBoard">
+            Puntuación: <span id="currentScore">0</span> | Máxima: <span id="highScore">0</span>
+        </div>
+        <div id="rankingPanel" style="display: none;">
+            Ranking: <span id="ranking"></span>
+        </div>
+        <button id="restartButton" style="display: none;">Reiniciar Juego</button>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const currentScoreElement = document.getElementById('currentScore');
+        const highScoreElement = document.getElementById('highScore');
+        const rankingPanel = document.getElementById('rankingPanel');
+        const rankingElement = document.getElementById('ranking');
+        const restartButton = document.getElementById('restartButton');
+
+        let bird, pipes, score, highScore, gameOver, frames, backgrounds, currentBackground, obstacles;
+
+        function initGame() {
+            bird = {
+                x: 50,
+                y: 300,
+                velocity: 0,
+                gravity: 0.5,
+                jump: -10,
+                width: 30,
+                height: 30
+            };
+            pipes = [];
+            obstacles = [];
+            score = 0;
+            highScore = parseInt(localStorage.getItem('highScore')) || 0;
+            gameOver = false;
+            frames = 0;
+            backgrounds = ['#87CEEB', '#FFDAB9', '#98FB98', '#FFB6C1'];
+            currentBackground = backgrounds[Math.floor(Math.random() * backgrounds.length)];
+
+            currentScoreElement.textContent = score;
+            highScoreElement.textContent = highScore;
+            restartButton.style.display = 'none';
+            rankingPanel.style.display = 'none';
+        }
+
+        function drawBird() {
+            ctx.font = '30px Arial';
+            ctx.fillText('🤫', bird.x, bird.y);
+        }
+
+        function createPipe() {
+            const gap = 200;
+            const pipeTop = Math.random() * (canvas.height - gap - 100) + 50;
+            pipes.push({
+                x: canvas.width,
+                top: pipeTop,
+                bottom: pipeTop + gap,
+                passed: false
+            });
+        }
+
+        function drawPipes() {
+            ctx.fillStyle = 'green';
+            pipes.forEach(pipe => {
+                ctx.fillRect(pipe.x, 0, 50, pipe.top);
+                ctx.fillRect(pipe.x, pipe.bottom, 50, canvas.height - pipe.bottom);
+            });
+        }
+
+        function createObstacle() {
+            if (Math.random() < 0.01) {
+                obstacles.push({
+                    x: canvas.width,
+                    y: Math.random() * (canvas.height - 50),
+                    width: 30,
+                    height: 30
+                });
+            }
+        }
+
+        function drawObstacles() {
+            ctx.font = '30px Arial';
+            obstacles.forEach(obstacle => {
+                ctx.fillText('🧏🏻‍♂️', obstacle.x, obstacle.y);
+            });
+        }
+
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = currentBackground;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (!gameOver) {
+                bird.velocity += bird.gravity;
+                bird.y += bird.velocity;
+
+                drawBird();
+
+                if (frames % 100 === 0) {
+                    createPipe();
+                }
+
+                pipes.forEach(pipe => {
+                    pipe.x -= 2;
+                });
+
+                pipes = pipes.filter(pipe => pipe.x > -50);
+
+                drawPipes();
+
+                pipes.forEach(pipe => {
+                    if (bird.x + bird.width > pipe.x && bird.x < pipe.x + 50 &&
+                        (bird.y < pipe.top || bird.y + bird.height > pipe.bottom)) {
+                        gameOver = true;
+                    }
+                });
+
+                pipes.forEach(pipe => {
+                    if (pipe.x + 50 < bird.x && !pipe.passed) {
+                        score++;
+                        currentScoreElement.textContent = score;
+                        pipe.passed = true;
+                    }
+                });
+
+                if (bird.y > canvas.height || bird.y < 0) {
+                    gameOver = true;
+                }
+
+                createObstacle();
+
+                obstacles.forEach(obstacle => {
+                    obstacle.x -= 2;
+                });
+
+                obstacles = obstacles.filter(obstacle => obstacle.x > -50);
+
+                drawObstacles();
+
+                obstacles.forEach(obstacle => {
+                    if (bird.x + bird.width > obstacle.x && bird.x < obstacle.x + obstacle.width &&
+                        bird.y + bird.height > obstacle.y && bird.y < obstacle.y + obstacle.height) {
+                        gameOver = true;
+                    }
+                });
+
+                frames++;
+            } else {
+                ctx.fillStyle = 'black';
+                ctx.font = '48px Arial';
+                ctx.fillText('Game Over', canvas.width / 2 - 100, canvas.height / 2);
+                ctx.font = '24px Arial';
+                ctx.fillText(`Puntuación final: ${score}`, canvas.width / 2 - 70, canvas.height / 2 + 40);
+                
+                if (score > highScore) {
+                    highScore = score;
+                    localStorage.setItem('highScore', highScore);
+                    highScoreElement.textContent = highScore;
+                }
+
+                restartButton.style.display = 'inline-block';
+                rankingPanel.style.display = 'block';
+                rankingElement.textContent = `1. ${highScore}`;
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        document.addEventListener('keydown', function(e) {
+            if (e.code === 'Space' && !gameOver) {
+                bird.velocity = bird.jump;
+            }
+        });
+
+        restartButton.addEventListener('click', function() {
+            initGame();
+        });
+
+        // Iniciar el juego
+        initGame();
+        gameLoop();
+    </script>
+</body>
+</html>
